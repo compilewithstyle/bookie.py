@@ -28,7 +28,7 @@ from email.mime.text import MIMEText
 BRO_LOG_DIRECTORY = "/opt/bro/logs"
 
 MAILING_LIST = [
-	"REDACTED",
+	REDACTED
 ]
 
 EMAIL_SUBJECTS = {
@@ -39,9 +39,9 @@ EMAIL_SUBJECTS = {
 
 USERSEARCH = None
 
-FROM_ADDR = 'REDACTED'
+FROM_ADDR = REDACTED
 
-MAX_ALERTS = 25
+MAX_ALERTS = 200
 
 ###############################################################################
 #	program variables
@@ -195,9 +195,13 @@ def main():
 	if os.path.isfile(throttle_file):
 		with open(throttle_file, 'r') as f:
 			for line in f:
+				line = line.rstrip()
 				expire, key = line.split(',')
+				expire = int(expire)
 				if expire > current_time:
 					throttle[key] = expire
+				else:
+					debug("Deleted throttle item {0}, current time = {1}".format(line, current_time))
 
 	debug("Read {0} entries from throttle file: {1}".format(len(throttle), throttle_file))
 
@@ -250,10 +254,11 @@ def main():
 			err("Could not find subject for alert: {0}".format(d))
 
 		# check whether or not to throttle
-		throttle_key = d['wustl_ip'] + ',' + alert_subject
+		throttle_key = d['wustl_ip'] + '~' + alert_subject
 		debug("Created throttle key: " + throttle_key)
 		if throttle_key in throttle:
 			debug("Item with key {0} is throttled".format(throttle_key))
+			continue
 		else:
 			throttle[throttle_key] = int(time.time()) + throttle_period
 
@@ -286,7 +291,8 @@ def main():
 	#	rewrite throttle file
 	###########################################################################
 
-	debug("throttle not has {0} items, writing to file".format(len(throttle)))
+	debug("throttle now has {0} items, writing to file".format(len(throttle)))
+	debug("{}".format(throttle))
 	with open(throttle_file, 'w') as f:
 		for key, expire in throttle.iteritems():
 			f.write( "{0},{1}\n".format(expire, key) )
