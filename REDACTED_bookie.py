@@ -28,7 +28,7 @@ from email.mime.text import MIMEText
 BRO_LOG_DIRECTORY = "/opt/bro/logs"
 
 MAILING_LIST = [
-	"n.siow@wustl.edu",
+	"REDACTED",
 ]
 
 EMAIL_SUBJECTS = {
@@ -39,7 +39,7 @@ EMAIL_SUBJECTS = {
 
 USERSEARCH = None
 
-FROM_ADDR = 'infosec@jefe.nts.wustl.edu'
+FROM_ADDr = 'REDACTED'
 
 MAX_ALERTS = 25
 
