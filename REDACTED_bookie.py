@@ -127,7 +127,7 @@ def main():
 
 		# find the most recent bro log directory that is not empty
 		dirs = reversed(sorted(os.listdir(BRO_LOG_DIRECTORY)))
-		mrd = next(d for d in dirs if d != 'current' and os.listdir(os.path.join(BRO_LOG_DIRECTORY, d)))
+		mrd = next(d for d in dirs if d.startswith('20') and os.listdir(os.path.join(BRO_LOG_DIRECTORY, d)))
 		debug("Found most recent log directory: " + mrd)
 
 		all_logs = os.listdir(os.path.join(BRO_LOG_DIRECTORY, mrd))
