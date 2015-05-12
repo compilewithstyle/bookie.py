@@ -9,8 +9,8 @@
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 import os
-import glob
 import datetime
+import shutil
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -20,11 +20,13 @@ import datetime
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-BRO_LOCAL = "/usr/local/bro/share/bro/site"
+BRO_LOCAL = "/Users/nsiow/box/code/work_projects/blackbook"
 
 TIME_FORMAT = "%Y-%m-%d"
 SEPARATOR = r'\x09'
-CURRENT_FILE, CURRENT_LINE, CURRENT_LN = None, None, None
+CURRENT_FILE, CURRENT_LINE, CURRENT_LINE_NUMBER = None, None, None
+
+CURRENT_DATE = datetime.date.today()
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #	end of config panel
@@ -32,19 +34,17 @@ CURRENT_FILE, CURRENT_LINE, CURRENT_LN = None, None, None
 
 #
 
-###########################################################################
-#	functions to make output easier
-###########################################################################
-
 def _pass(filename):
 	print "[PASS]: " + filename
 
-def _fail(filename, ln, reason):
-	print "[FAIL]: file {0} failed in line {1} with the following reason:\n{2}".format(filename, ln, reason)
+def _fail(reason):
+	print "[FAIL] in file {0}, line {1}".format(CURRENT_FILE, CURRENT_LINE_NUMBER)
+	print "Error in line: " + CURRENT_LINE
+	print reason
 	exit(1)
 
 def _info(msg):
-	pass
+	print "[INFO]: " + msg
 
 def main():
 
@@ -65,24 +65,98 @@ def main():
 	## analyze each file, checking it for correctness as well as cleaning out
 	## expired entries
 	##
+	global CURRENT_LINE
+	global CURRENT_FILE
+	global CURRENT_LINE_NUMBER
 	for f in brodata_files:
-		
-		lines = map(rstrip, open(f, 'r').readlines)
+
+		CURRENT_FILE = f
+		CURRENT_LINE = ''
+		CURRENT_LINE_NUMBER = 0
+		lines = [l.rstrip()for l in open(f, 'r').readlines()]
+
+		if not lines:
+			_fail("File is empty!")
 
 		##
 		## check for correctness
 		##
 
 		## make sure the first line is the separator field
-		expected_sep_line = EXP
+		CURRENT_LINE = lines[0]
+		CURRENT_LINE_NUMBER = 0
+		expected_sep_line = r'#separator ' + SEPARATOR
+		if lines[0] != expected_sep_line:
+			_fail('First line of the file was not the expected #separator header')
 
+		## make sure the second line is the #fields field
 		##
-		## edit file
+		CURRENT_LINE = lines[1]
+		CURRENT_LINE_NUMBER = 1
+		if not CURRENT_LINE.startswith('#fields'):
+			_fail('Second line of the file was not the #fields header')
+
+		## make sure the fields has the correct # and type of fields
 		##
+		fields_data = CURRENT_LINE.split("\t")
+		if len(fields_data) != 4:
+			_fail("Expected 4 items in #fields header, found {0}".format(len(fields_data)))
 
-	print brodata_files
+		if fields_data[2] != 'source':
+			_fail("Third item in #fields line should be 'source'")
 
-	
+		if fields_data[3] != 'date_to_remove':
+			_fail("Fourth item in #fields line should be 'date_to_remove'")
+
+		## go through the lines and make sure they are what you would expected
+		##
+		lines2keep = [ lines[0], lines[1] ]
+		for line in lines[2:]:
+			CURRENT_LINE = line
+			CURRENT_LINE_NUMBER += 1
+
+			## make sure the line isn't empty
+			##
+			if not line:
+				_fail("Empty line, please remove.")
+
+			## make sure the correct number of fields exist and the content is as expected
+			##
+			line_data = line.split("\t")
+			if len(line_data) != 3:
+				_fail("Expected 3 items in line, found {0}".format(len(line_data)))
+
+			if any(d == '-' for d in line_data):
+				_fail("Found a field containing '-', Bro will interpret this as NULL!")
+
+			if line_data[0].startswith( ('www.','http://', 'https://') ):
+				_fail("Data has a leading 'www.' or 'http://' or 'https://', please remove this")
+
+			## check to see if the line should be removed or not
+			##
+			dtr_string = line_data[2]
+			if dtr_string == 'never':
+				lines2keep.append(line)
+			else:
+				try:
+					date_info = map(int, dtr_string.split("-"))
+					dtr = datetime.date(*date_info)
+				except Exception as e:
+					print e
+					_fail("Error parsing the 'date_to_remove' field: " + dtr_string)
+
+				if dtr > CURRENT_DATE:
+					lines2keep.append(line)
+				else:
+					_info("removing line: " + line)
+
+			## make a copy of the previous file, then create a new file in its place
+			##
+			shutil.copyfile(f, f+".backup")
+
+			with open(f, 'w') as new_f:
+				for line in lines2keep:
+					new_f.write( line + "\n" )
 
 if __name__ == '__main__':
 	main()
