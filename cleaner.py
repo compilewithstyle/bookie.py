@@ -33,8 +33,8 @@ CURRENT_DATE = datetime.date.today()
 
 #
 
-def _pass(filename):
-	print "[PASS]: " + filename
+def _pass():
+	print "[PASS]: \t" + CURRENT_FILE
 
 def _fail(reason):
 	print "[FAIL] in file {0}, line {1}".format(CURRENT_FILE, CURRENT_LINE_NUMBER)
@@ -68,6 +68,8 @@ def main():
 	global CURRENT_FILE
 	global CURRENT_LINE_NUMBER
 	for f in brodata_files:
+
+		_info("Checking file: " + f)
 
 		CURRENT_FILE = f
 		CURRENT_LINE = ''
@@ -147,15 +149,21 @@ def main():
 				if dtr > CURRENT_DATE:
 					lines2keep.append(line)
 				else:
-					_info("removing line: " + line)
+					_info("\tremoving line: " + line)
 
-			## make a copy of the previous file, then create a new file in its place
-			##
+		## make a copy of the previous file, then create a new file in its place
+		##
+		if len(lines2keep) != len(lines):
+			_info("\tUpdating file: " + f)
 			shutil.copyfile(f, f+".backup")
 
 			with open(f, 'w') as new_f:
 				for line in lines2keep:
 					new_f.write( line + "\n" )
 
+		_pass()
+
+
 if __name__ == '__main__':
 	main()
+	print '\nAll files ok!'
