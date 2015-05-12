@@ -8,9 +8,7 @@
 #		Generates email alerts for blackbook/intel/notice logs
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-import re
 import os
-import sys
 import gzip
 import time
 import smtplib
