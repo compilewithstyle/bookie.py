@@ -22,7 +22,6 @@ import shutil
 
 BRO_LOCAL = "/Users/nsiow/box/code/work_projects/blackbook"
 
-TIME_FORMAT = "%Y-%m-%d"
 SEPARATOR = r'\x09'
 CURRENT_FILE, CURRENT_LINE, CURRENT_LINE_NUMBER = None, None, None
 
